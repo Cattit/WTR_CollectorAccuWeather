@@ -1,6 +1,5 @@
 const axios = require("axios");
-let dal = require("wtr-dal");
-let source = "AccuWeather"
+const dal = require("wtr-dal");
 const dateNow = new Date()
 dateNow.setHours(0, 0, 0, 000)
 
@@ -40,7 +39,7 @@ function rainfall(forecast_snow, forecast_rain, forecast_grad, forecast_storm, w
     }
 }
 
-async function analyzeData(code_location, { DailyForecasts }) {
+async function analyzeData(code_location, { DailyForecasts }, id_source) {
     let dataAll = [];
     for (let dd = 1; dd < 4; dd += 2) {
 
@@ -48,12 +47,12 @@ async function analyzeData(code_location, { DailyForecasts }) {
             wind_speed_from = DailyForecasts[dd].Day.Wind.Speed.Value * 10 / 36,    //перевод в м/с
             wind_speed_to = DailyForecasts[dd].Day.Wind.Speed.Value * 10 / 36,
             wind_gust = DailyForecasts[dd].Day.WindGust.Speed.Value * 10 / 36,
-            amount_rainfall = DailyForecasts[dd].Day.Rain.Value + DailyForecasts[dd].Day.Ice.Value + 10 * DailyForecasts[dd].Day.Snow.Value // переводим снег в мм
+            amount_rainfall = DailyForecasts[dd].Day.TotalLiquid.Value
 
         dataAll.push(
             {
                 code_location: code_location,
-                source,
+                id_source,
                 depth_forecast: dd,
                 date: dateDay(dd),
                 temperature: temperature,
@@ -70,12 +69,12 @@ async function analyzeData(code_location, { DailyForecasts }) {
         wind_speed_from = DailyForecasts[dd].Night.Wind.Speed.Value * 10 / 36
         wind_speed_to = DailyForecasts[dd].Night.Wind.Speed.Value * 10 / 36
         wind_gust = DailyForecasts[dd].Night.WindGust.Speed.Value * 10 / 36
-        amount_rainfall = DailyForecasts[dd].Night.Rain.Value + DailyForecasts[dd].Night.Ice.Value + 10 * DailyForecasts[dd].Night.Snow.Value
+        amount_rainfall = DailyForecasts[dd].Night.TotalLiquid.Value
 
         dataAll.push(
             {
                 code_location: code_location,
-                source,
+                id_source,
                 depth_forecast: dd,
                 date: dateNight(dd),
                 temperature: temperature,
@@ -89,15 +88,13 @@ async function analyzeData(code_location, { DailyForecasts }) {
             })
 
     }
-
-    // console.log(dataAll)
     return dataAll
 }
 
-function getforecast(code_location) {
+function getforecast(urlApi, code_location, id_source) {
     return axios({
         method: "get",
-        url: "http://dataservice.accuweather.com/forecasts/v1/daily/5day/" + code_location,
+        url: urlApi + code_location, //"http://dataservice.accuweather.com/forecasts/v1/daily/5day/"
         params: {
             apikey: "q3xTmbHKf0OEbYLAtvAPvhXurloxQroN",
             details: true,
@@ -105,8 +102,7 @@ function getforecast(code_location) {
         }
     })
         .then(res => {
-            // console.log(res.data);
-            return analyzeData(code_location, res.data);
+            return analyzeData(code_location, res.data, id_source);
         })
         .catch(err => console.log(err));
 }
